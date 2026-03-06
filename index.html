@@ -1,1 +1,185 @@
-いね
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Brawl Stars Web Clone</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser-arcade-physics.min.js"></script>
+    <style>
+        body { margin: 0; background: #222; overflow: hidden; font-family: sans-serif; }
+        #ui-container { position: absolute; top: 10px; left: 10px; color: white; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div id="ui-container">
+        <div>ウルトゲージ: <span id="ult-val">0</span>%</div>
+        <div style="font-size: 12px;">[矢印キー]:移動 [スペース]:攻撃 [E]:必殺技</div>
+    </div>
+<script>
+const config = {
+    type: Phaser.AUTO,
+    width: 800,
+    height: 600,
+    physics: { default: 'arcade', arcade: { debug: false } },
+    scene: { preload: preload, create: create, update: update }
+};
+
+let player, bot, obstacles, bullets, botBullets, cursors, spaceKey, eKey;
+let ultCharge = 0;
+const game = new Phaser.Game(config);
+
+function preload() {
+    // 画像を使う場合はここでロード（例）
+    // this.load.spritesheet('player_sheet', 'player.png', { frameWidth: 32, frameHeight: 32 });
+}
+
+function create() {
+    // 1. 壁（障害物）
+    obstacles = this.physics.add.staticGroup();
+    obstacles.add(this.add.rectangle(200, 300, 80, 150, 0x555555)); 
+    obstacles.add(this.add.rectangle(600, 300, 80, 150, 0x555555));
+    obstacles.add(this.add.rectangle(400, 150, 200, 40, 0x555555));
+
+    // 2. プレイヤー
+    player = this.add.rectangle(100, 300, 40, 40, 0x00aaff);
+    this.physics.add.existing(player);
+    player.body.setCollideWorldBounds(true);
+    player.hp = 100;
+    player.maxHp = 100;
+
+    // 3. ボット
+    bot = this.add.rectangle(700, 300, 40, 40, 0xff4444);
+    this.physics.add.existing(bot);
+    bot.body.setCollideWorldBounds(true);
+    bot.hp = 100;
+    bot.maxHp = 100;
+
+    // 4. グループ
+    bullets = this.physics.add.group();
+    botBullets = this.physics.add.group();
+
+    // 5. 入力設定
+    cursors = this.input.keyboard.createCursorKeys();
+    spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    eKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+
+    // 6. ボットの自動攻撃（1.5秒おき）
+    this.time.addEvent({
+        delay: 1500,
+        callback: botFire,
+        callbackScope: this,
+        loop: true
+    });
+
+    // 7. 当たり判定設定
+    this.physics.add.collider(player, obstacles);
+    this.physics.add.collider(bot, obstacles);
+    this.physics.add.collider(bullets, obstacles, (b) => b.destroy());
+    this.physics.add.collider(botBullets, obstacles, (b) => b.destroy());
+
+    // プレイヤーの弾がボットに当たった
+    this.physics.add.overlap(bullets, bot, (target, bullet) => {
+        bullet.destroy();
+        takeDamage(target, 20);
+        chargeUlt(15);
+    });
+
+    // ボットの弾がプレイヤーに当たった
+    this.physics.add.overlap(botBullets, player, (target, bullet) => {
+        bullet.destroy();
+        takeDamage(target, 10);
+    });
+
+    // HPバー用の描画オブジェクト
+    player.hpBar = this.add.graphics();
+    bot.hpBar = this.add.graphics();
+}
+
+function update() {
+    // プレイヤー移動
+    player.body.setVelocity(0);
+    if (cursors.left.isDown) player.body.setVelocityX(-200);
+    else if (cursors.right.isDown) player.body.setVelocityX(200);
+    if (cursors.up.isDown) player.body.setVelocityY(-200);
+    else if (cursors.down.isDown) player.body.setVelocityY(200);
+
+    // 攻撃（スペースキー）
+    if (Phaser.Input.Keyboard.JustDown(spaceKey)) {
+        playerFire(this);
+    }
+
+    // 必殺技（Eキー）
+    if (Phaser.Input.Keyboard.JustDown(eKey) && ultCharge >= 100) {
+        useUltimate(this);
+    }
+
+    // ボットAI（プレイヤーを追跡）
+    this.physics.moveToObject(bot, player, 80);
+
+    // HPバーの更新
+    drawHPBar(player.hpBar, player);
+    drawHPBar(bot.hpBar, bot);
+}
+
+function drawHPBar(graphics, char) {
+    graphics.clear();
+    graphics.fillStyle(0x000000);
+    graphics.fillRect(char.x - 25, char.y - 40, 50, 6);
+    let color = char === player ? 0x00ff00 : 0xff0000;
+    graphics.fillStyle(color);
+    let w = (char.hp / char.maxHp) * 50;
+    graphics.fillRect(char.x - 25, char.y - 40, Math.max(0, w), 6);
+}
+
+function playerFire(scene) {
+    let b = scene.add.rectangle(player.x, player.y, 12, 12, 0x00ffff);
+    scene.physics.add.existing(b);
+    // 向いている方向に飛ばす（簡易的に右方向、または移動方向）
+    let vx = player.body.velocity.x === 0 ? 400 : player.body.velocity.x * 2;
+    let vy = player.body.velocity.y === 0 ? 0 : player.body.velocity.y * 2;
+    if(vx === 0 && vy === 0) vx = 400; // 静止時は右に撃つ
+    b.body.setVelocity(vx, vy);
+    bullets.add(b);
+    scene.time.delayedCall(1000, () => b.destroy());
+}
+
+function botFire() {
+    let b = this.add.rectangle(bot.x, bot.y, 12, 12, 0xffaa00);
+    this.physics.add.existing(b);
+    this.physics.moveToObject(b, player, 300);
+    botBullets.add(b);
+    this.time.delayedCall(2000, () => b.destroy());
+}
+
+function takeDamage(char, amt) {
+    char.hp -= amt;
+    if (char.hp <= 0) {
+        char.hp = char.maxHp;
+        if (char === player) {
+            char.setPosition(100, 300);
+            ultCharge = 0;
+            document.getElementById('ult-val').innerText = ultCharge;
+        } else {
+            char.setPosition(700, 300);
+        }
+    }
+}
+
+function chargeUlt(amt) {
+    ultCharge = Math.min(100, ultCharge + amt);
+    document.getElementById('ult-val').innerText = ultCharge;
+}
+
+function useUltimate(scene) {
+    ultCharge = 0;
+    document.getElementById('ult-val').innerText = ultCharge;
+    // 必殺技：8方向に巨大弾
+    for (let i = 0; i < 360; i += 45) {
+        let b = scene.add.rectangle(player.x, player.y, 25, 25, 0xffff00);
+        scene.physics.add.existing(b);
+        scene.physics.velocityFromAngle(i, 300, b.body.velocity);
+        bullets.add(b);
+    }
+}
+</script>
+</body>
+</html>
