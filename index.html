@@ -1,50 +1,50 @@
-import time
-import random
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>無人島サバイバル：VS クマ</title>
+    <style>
+        body { background: #1a1a1a; color: #00ff00; font-family: 'Courier New', Courier, monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        #game-container { width: 600px; padding: 20px; border: 2px solid #00ff00; background: #000; box-shadow: 0 0 20px rgba(0,255,0,0.2); }
+        #log { height: 200px; overflow-y: auto; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; white-space: pre-wrap; }
+        .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { background: #000; color: #00ff00; border: 1px solid #00ff00; padding: 10px; cursor: pointer; font-size: 14px; }
+        button:hover { background: #00ff00; color: #000; }
+    </style>
+</head>
+<body>
 
-def start_game():
-    print("--- 無人島サバイバル・コマンドバトル ---")
-    print("豪華客船から放り出されたあなたは、無人島に漂着した。")
-    print("目の前には、お腹をすかせた巨大なクマが立ちふさがっている！")
-    print("-" * 40)
-    
-    items = {
-        "A": "半分に割れたスマホ",
-        "B": "ピコピコハンマー",
-        "C": "大量のわさび",
-        "D": "タキシード"
+<div id="game-container">
+    <div id="log">【MISSION】目の前のクマを退けろ！アイテムを選択してください。</div>
+    <div class="buttons">
+        <button onclick="action('A')">[A] 半分に割れたスマホ</button>
+        <button onclick="action('B')">[B] ピコピコハンマー</button>
+        <button onclick="action('C')">[C] 大量のわさび</button>
+        <button onclick="action('D')">[D] タキシード</button>
+    </div>
+</div>
+
+<script>
+    const log = document.getElementById('log');
+    function print(text) {
+        log.innerText = text;
     }
-    
-    for key, val in items.items():
-        print(f"[{key}] {val}")
-        
-    choice = input("\nどのアイテムで戦う？ (A/B/C/D): ").upper()
-    
-    print("\nシステム：行動を解析中...")
-    time.sleep(1.5)
 
-    if choice == "A":
-        print("＞ あなたは『半分に割れたスマホ』を掲げた！")
-        print("＞ 画面の反射がクマの目に直撃！クマはまぶしさに怯んでいる。")
-        print("＞ 結果：一時的な目くらましに成功。今のうちに逃げろ！ 【生存率60%】")
-        
-    elif choice == "B":
-        print("＞ あなたは『ピコピコハンマー』を装備した！")
-        print("＞ 渾身の一撃！「ピコッ！」という気の抜けた音が島に響き渡る。")
-        print("＞ クマは困惑している……どうやら戦意を喪失したようだ。 【生存率80%】")
-        
-    elif choice == "C":
-        print("＞ あなたは『大量のわさび』を自分の体に塗りたくった！")
-        print("＞ クマがあなたを一口かじろうとした瞬間、激痛がクマを襲う！")
-        print("＞ クマは涙目になって海へ走り去っていった。 【生存率100%】")
-        
-    elif choice == "D":
-        print("＞ あなたは素早く『タキシード』に着替えた。")
-        print("＞ 圧倒的な気品。クマはあなたを「島の支配者」だと勘違いし、跪いた。")
-        print("＞ 結果：クマを従え、島の王となった。 【生存率 ???%】")
-        
-    else:
-        print("＞ 何もせず固まっている間に、クマにハグ（物理）された。")
-        print("＞ GAME OVER")
+    function action(choice) {
+        print("解析中...");
+        setTimeout(() => {
+            if (choice === 'A') {
+                print("【結果：生存】\nスマホの画面反射でクマの目を潰した！その隙に森へ逃げ込んだ。");
+            } else if (choice === 'B') {
+                print("【結果：微妙】\nピコッ！という音にクマが驚いて立ち止まった。しかし、クマはさらに怒っているようだ...");
+            } else if (choice === 'C') {
+                print("【結果：勝利】\n鼻先にわさびを直撃させた！クマは悶絶しながら海へ飛び込んでいった！");
+            } else if (choice === 'D') {
+                print("【結果：？？】\nあまりの正装にクマが困惑している。どうやら執事として雇われたようだ。");
+            }
+        }, 800);
+    }
+</script>
 
-if __name__ == "__main__":
-    start_game()
+</body>
+</html>
