@@ -2,47 +2,56 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>無人島サバイバル：VS クマ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNINTO SURVIVAL</title>
     <style>
-        body { background: #1a1a1a; color: #00ff00; font-family: 'Courier New', Courier, monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        #game-container { width: 600px; padding: 20px; border: 2px solid #00ff00; background: #000; box-shadow: 0 0 20px rgba(0,255,0,0.2); }
-        #log { height: 200px; overflow-y: auto; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; white-space: pre-wrap; }
-        .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button { background: #000; color: #00ff00; border: 1px solid #00ff00; padding: 10px; cursor: pointer; font-size: 14px; }
-        button:hover { background: #00ff00; color: #000; }
+        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
+        #screen { width: 90%; max-width: 600px; border: 2px solid #0f0; padding: 20px; background: #050505; box-shadow: 0 0 15px #0f0; }
+        #text-area { height: 180px; margin-bottom: 20px; line-height: 1.6; font-size: 1.1em; border-bottom: 1px dotted #0f0; }
+        .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        button { background: transparent; border: 1px solid #0f0; color: #0f0; padding: 15px; cursor: pointer; font-size: 1em; transition: 0.2s; }
+        button:hover { background: #0f0; color: #000; }
+        button:disabled { border-color: #050; color: #050; cursor: not-allowed; }
+        .blink { animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
 
-<div id="game-container">
-    <div id="log">【MISSION】目の前のクマを退けろ！アイテムを選択してください。</div>
-    <div class="buttons">
-        <button onclick="action('A')">[A] 半分に割れたスマホ</button>
-        <button onclick="action('B')">[B] ピコピコハンマー</button>
-        <button onclick="action('C')">[C] 大量のわさび</button>
-        <button onclick="action('D')">[D] タキシード</button>
+<div id="screen">
+    <div id="text-area"></div>
+    <div class="btns" id="btn-container">
+        <button onclick="choice('A')">[A] スマホ(壊)</button>
+        <button onclick="choice('B')">[B] ピコハン</button>
+        <button onclick="choice('C')">[C] わさび</button>
+        <button onclick="choice('D')">[D] タキシード</button>
     </div>
 </div>
 
 <script>
-    const log = document.getElementById('log');
-    function print(text) {
-        log.innerText = text;
-    }
+    const msg = "【緊急事態】\n無人島。目の前に腹をすかせた巨大なクマがいる！\n手元にはガラクタしかない。\nどうする？ <span class='blink'>_</span>";
+    const textArea = document.getElementById('text-area');
+    const btnContainer = document.getElementById('btn-container');
 
-    function action(choice) {
-        print("解析中...");
+    textArea.innerHTML = msg;
+
+    function choice(type) {
+        const btns = btnContainer.querySelectorAll('button');
+        btns.forEach(b => b.disabled = true);
+        
+        textArea.innerHTML = "行動中...";
+        
         setTimeout(() => {
-            if (choice === 'A') {
-                print("【結果：生存】\nスマホの画面反射でクマの目を潰した！その隙に森へ逃げ込んだ。");
-            } else if (choice === 'B') {
-                print("【結果：微妙】\nピコッ！という音にクマが驚いて立ち止まった。しかし、クマはさらに怒っているようだ...");
-            } else if (choice === 'C') {
-                print("【結果：勝利】\n鼻先にわさびを直撃させた！クマは悶絶しながら海へ飛び込んでいった！");
-            } else if (choice === 'D') {
-                print("【結果：？？】\nあまりの正装にクマが困惑している。どうやら執事として雇われたようだ。");
+            let res = "";
+            switch(type) {
+                case 'A': res = "【生存】\nスマホの画面反射で目潰し！\nクマが怯んだ隙に、ヤシの木の上へ逃げ延びた。"; break;
+                case 'B': res = "【死亡】\nピコッ！と良い音が響いた。\nクマは「遊んでくれるのか？」と喜び、全力のベアハッグで圧死した。"; break;
+                case 'C': res = "【完全勝利】\n鼻先にわさびを塗り込んだ！\nクマは悶絶し、時速80kmで海へ帰っていった。"; break;
+                case 'D': res = "【伝説】\n着替えた。圧倒的フォーマル。\nクマは「失礼しました」と会釈し、サケを献上してきた。"; break;
             }
-        }, 800);
+            textArea.innerHTML = res + "<br><br><button onclick='location.reload()'>リトライ</button>";
+            btnContainer.style.display = 'none';
+        }, 1000);
     }
 </script>
 
