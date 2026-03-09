@@ -1,59 +1,38 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UNINTO SURVIVAL</title>
+    <title>Survival Game</title>
     <style>
-        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; overflow: hidden; }
-        #screen { width: 90%; max-width: 600px; border: 2px solid #0f0; padding: 20px; background: #050505; box-shadow: 0 0 15px #0f0; }
-        #text-area { height: 180px; margin-bottom: 20px; line-height: 1.6; font-size: 1.1em; border-bottom: 1px dotted #0f0; }
-        .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        button { background: transparent; border: 1px solid #0f0; color: #0f0; padding: 15px; cursor: pointer; font-size: 1em; transition: 0.2s; }
+        body { background: #000; color: #0f0; font-family: monospace; padding: 20px; text-align: center; }
+        #out { height: 200px; padding: 20px; border: 1px solid #0f0; margin-bottom: 20px; white-space: pre-wrap; font-size: 1.2rem; }
+        button { background: #000; color: #0f0; border: 1px solid #0f0; padding: 10px 20px; margin: 5px; cursor: pointer; }
         button:hover { background: #0f0; color: #000; }
-        button:disabled { border-color: #050; color: #050; cursor: not-allowed; }
-        .blink { animation: blink 1s infinite; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
-
-<div id="screen">
-    <div id="text-area"></div>
-    <div class="btns" id="btn-container">
-        <button onclick="choice('A')">[A] スマホ(壊)</button>
-        <button onclick="choice('B')">[B] ピコハン</button>
-        <button onclick="choice('C')">[C] わさび</button>
-        <button onclick="choice('D')">[D] タキシード</button>
+    <div id="out">【警告】巨大なクマが接近中！手元のアイテムで対抗しろ。</div>
+    <div id="btns">
+        <button onclick="p('A')">割れたスマホ</button>
+        <button onclick="p('B')">ピコハン</button>
+        <button onclick="p('C')">大量のわさび</button>
+        <button onclick="p('D')">タキシード</button>
     </div>
-</div>
-
-<script>
-    const msg = "【緊急事態】\n無人島。目の前に腹をすかせた巨大なクマがいる！\n手元にはガラクタしかない。\nどうする？ <span class='blink'>_</span>";
-    const textArea = document.getElementById('text-area');
-    const btnContainer = document.getElementById('btn-container');
-
-    textArea.innerHTML = msg;
-
-    function choice(type) {
-        const btns = btnContainer.querySelectorAll('button');
-        btns.forEach(b => b.disabled = true);
-        
-        textArea.innerHTML = "行動中...";
-        
-        setTimeout(() => {
-            let res = "";
-            switch(type) {
-                case 'A': res = "【生存】\nスマホの画面反射で目潰し！\nクマが怯んだ隙に、ヤシの木の上へ逃げ延びた。"; break;
-                case 'B': res = "【死亡】\nピコッ！と良い音が響いた。\nクマは「遊んでくれるのか？」と喜び、全力のベアハッグで圧死した。"; break;
-                case 'C': res = "【完全勝利】\n鼻先にわさびを塗り込んだ！\nクマは悶絶し、時速80kmで海へ帰っていった。"; break;
-                case 'D': res = "【伝説】\n着替えた。圧倒的フォーマル。\nクマは「失礼しました」と会釈し、サケを献上してきた。"; break;
-            }
-            textArea.innerHTML = res + "<br><br><button onclick='location.reload()'>リトライ</button>";
-            btnContainer.style.display = 'none';
-        }, 1000);
-    }
-</script>
-
+    <script>
+        function p(c) {
+            const o = document.getElementById('out');
+            o.innerHTML = "判定中...";
+            setTimeout(() => {
+                const r = {
+                    'A': "【生存】スマホの反射光で目潰し！クマは海へ転落した。",
+                    'B': "【死亡】いい音が鳴っただけだった。クマに食われた。",
+                    'C': "【勝利】鼻にわさびを直撃！クマは悶絶して逃走した。",
+                    'D': "【伝説】圧倒的な礼装にクマが跪いた。新しい王の誕生だ。"
+                };
+                o.innerHTML = r[c] + "\n\n<button onclick='location.reload()'>リトライ</button>";
+                document.getElementById('btns').style.display = 'none';
+            }, 800);
+        }
+    </script>
 </body>
 </html>
