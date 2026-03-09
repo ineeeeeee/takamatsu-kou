@@ -1,89 +1,119 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>EASY SHOOTER</title>
+    <title>POWER-UP SHOOTER</title>
     <style>
-        body { background: #000; color: #0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: sans-serif; overflow: hidden; }
-        canvas { border: 2px solid #0f0; background: #000; cursor: crosshair; }
-        .ui { margin-bottom: 10px; font-weight: bold; font-size: 1.2rem; }
+        body { background: #000; color: #0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: 'Courier New', monospace; overflow: hidden; }
+        canvas { border: 4px solid #333; background: #000; box-shadow: 0 0 20px #0f0; }
+        .ui { margin-bottom: 10px; font-size: 1.5rem; text-shadow: 0 0 10px #0f0; }
     </style>
 </head>
-<body>
-    <div class="ui">SCORE: <span id="s">0</span></div>
-    <canvas id="g" width="400" height="500"></canvas>
-    <div style="margin-top:10px; color:#888;">[←][→]:移動 / [SPACE]:連射</div>
+<body onclick="resetCheck()" onkeydown="resetCheck()">
+    <div class="ui">SCORE: <span id="s">0</span> <span id="pow" style="color:yellow; font-size:0.8rem; margin-left:20px;"></span></div>
+    <canvas id="g" width="400" height="550"></canvas>
+    <div style="margin-top:10px; color:#555;">[←][→]:移動 / [SPACE]:連射 / 赤:敵 / 黄:強化</div>
 
 <script>
 const cvs = document.getElementById('g');
 const ctx = cvs.getContext('2d');
 const sEl = document.getElementById('s');
+const pEl = document.getElementById('pow');
 
-let p, bs, es, score, alive, keys = {};
+let p, bs, es, items, score, alive, power, tick;
 
 function init() {
-    p = { x: 180, y: 440, w: 40, h: 20 };
-    bs = []; es = []; score = 0; alive = true;
+    p = { x: 180, y: 480, w: 40, h: 20 };
+    bs = []; es = []; items = [];
+    score = 0; alive = true; power = 0; tick = 0;
     sEl.innerText = score;
+    pEl.innerText = "";
 }
 
-window.onkeydown = e => keys[e.code] = true;
-window.onkeyup = e => keys[e.code] = false;
-cvs.onclick = () => { if(!alive) init(); };
+function resetCheck() { if(!alive) init(); }
+
+window.onkeydown = e => { if(alive) keys[e.code] = true; };
+window.onkeyup = e => { keys[e.code] = false; };
+let keys = {};
 
 function loop() {
     if (alive) {
-        // 移動速度アップ
+        tick++;
         if (keys['ArrowLeft'] && p.x > 0) p.x -= 8;
         if (keys['ArrowRight'] && p.x < 360) p.x += 8;
-        // 連射しやすく調整
-        if (keys['Space']) {
-            if (bs.length === 0 || bs[bs.length-1].y < 420) {
-                bs.push({ x: p.x + 18, y: p.y, w: 4, h: 10 });
+        
+        // 攻撃処理（パワーアップで3連射）
+        if (keys['Space'] && tick % 8 === 0) {
+            bs.push({ x: p.x + 18, y: p.y, w: 4, h: 10 });
+            if(power > 0) {
+                bs.push({ x: p.x, y: p.y + 10, w: 4, h: 10 });
+                bs.push({ x: p.x + 36, y: p.y + 10, w: 4, h: 10 });
             }
         }
 
-        bs.forEach((b, i) => { b.y -= 10; if (b.y < 0) bs.splice(i, 1); });
+        // アイテム出現
+        if (Math.random() < 0.005) items.push({ x: Math.random() * 370, y: -20, w: 20, h: 20 });
 
-        // 敵の出現率と速度をマイルドに
-        if (Math.random() < 0.03) es.push({ x: Math.random() * 370, y: -30, w: 30, h: 30 });
-        
-        es.forEach((e, i) => {
-            e.y += 1.5; // 低速化
-            if (e.y > 500) alive = false;
-            
+        // 敵出現（一定スコアで中ボス）
+        if (tick % 40 === 0) {
+            let isBoss = (score > 0 && score % 2000 === 0);
+            es.push({ x: Math.random() * 350, y: -50, w: isBoss ? 80 : 30, h: isBoss ? 40 : 30, hp: isBoss ? 10 : 1, boss: isBoss });
+        }
+
+        // 更新処理
+        [bs, es, items].forEach(list => {
+            list.forEach((obj, i) => {
+                obj.y += (obj.hp ? 1 : 2.5); // ボスはゆっくり
+                if (obj.y > 550) { if(!obj.hp && list === es) alive = false; list.splice(i, 1); }
+            });
+        });
+
+        // 当たり判定
+        es.forEach((e, ei) => {
             bs.forEach((b, bi) => {
                 if (b.x < e.x + e.w && b.x + b.w > e.x && b.y < e.y + e.h && b.y + b.h > e.y) {
-                    es.splice(i, 1); bs.splice(bi, 1);
-                    score += 100; sEl.innerText = score;
+                    e.hp--; bs.splice(bi, 1);
+                    if(e.hp <= 0) {
+                        es.splice(ei, 1);
+                        score += e.boss ? 1000 : 100;
+                        sEl.innerText = score;
+                    }
                 }
             });
         });
+
+        items.forEach((it, i) => {
+            if (it.x < p.x + p.w && it.x + it.w > p.x && it.y < p.y + p.h && it.y + it.h > p.y) {
+                items.splice(i, 1);
+                power = 300; // 300フレーム分強化
+                pEl.innerText = "POWER UP!!";
+            }
+        });
+
+        if(power > 0) { power--; if(power <= 0) pEl.innerText = ""; }
     }
 
     // 描画
-    ctx.clearRect(0, 0, 400, 500);
-    ctx.fillStyle = '#0f0';
+    ctx.clearRect(0, 0, 400, 550);
+    ctx.fillStyle = power > 0 ? '#ff0' : '#0f0';
     ctx.fillRect(p.x, p.y, p.w, p.h);
-    ctx.fillStyle = '#fff';
-    bs.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
-    ctx.fillStyle = '#f00';
-    es.forEach(e => ctx.fillRect(e.x, e.y, e.w, e.h));
+    ctx.fillStyle = '#fff'; bs.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
+    ctx.fillStyle = '#f00'; es.forEach(e => ctx.fillRect(e.x, e.y, e.w, e.h));
+    ctx.fillStyle = '#ff0'; items.forEach(it => ctx.fillRect(it.x, it.y, it.w, it.h));
 
     if (!alive) {
-        ctx.fillStyle = "rgba(0,0,0,0.7)";
-        ctx.fillRect(0,0,400,500);
+        ctx.fillStyle = "rgba(0,0,0,0.8)";
+        ctx.fillRect(0,0,400,550);
         ctx.fillStyle = "#fff";
-        ctx.font = "30px sans-serif";
-        ctx.fillText("GAME OVER", 110, 220);
-        ctx.font = "20px sans-serif";
-        ctx.fillText("Click to Restart", 130, 260);
+        ctx.textAlign = "center";
+        ctx.font = "30px monospace";
+        ctx.fillText("GAME OVER", 200, 250);
+        ctx.font = "15px monospace";
+        ctx.fillText("Click or Press Space to Retry", 200, 300);
     }
     requestAnimationFrame(loop);
 }
-
-init();
-loop();
+init(); loop();
 </script>
 </body>
 </html>
