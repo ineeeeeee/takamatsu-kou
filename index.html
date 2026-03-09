@@ -2,83 +2,87 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>SIMPLE SHOOTER</title>
+    <title>EASY SHOOTER</title>
     <style>
-        body { background: #111; color: #0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: monospace; }
-        canvas { border: 2px solid #0f0; background: #000; }
-        .ui { margin-top: 10px; }
+        body { background: #000; color: #0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: sans-serif; overflow: hidden; }
+        canvas { border: 2px solid #0f0; background: #000; cursor: crosshair; }
+        .ui { margin-bottom: 10px; font-weight: bold; font-size: 1.2rem; }
     </style>
 </head>
 <body>
-    <div class="ui">SCORE: <span id="score">0</span> | [←][→]:移動 [SPACE]:攻撃</div>
+    <div class="ui">SCORE: <span id="s">0</span></div>
     <canvas id="g" width="400" height="500"></canvas>
+    <div style="margin-top:10px; color:#888;">[←][→]:移動 / [SPACE]:連射</div>
 
 <script>
 const cvs = document.getElementById('g');
 const ctx = cvs.getContext('2d');
-const scoreEl = document.getElementById('score');
+const sEl = document.getElementById('s');
 
-let player = { x: 180, y: 450, w: 40, h: 20 };
-let bullets = [];
-let enemies = [];
-let score = 0;
-let keys = {};
+let p, bs, es, score, alive, keys = {};
+
+function init() {
+    p = { x: 180, y: 440, w: 40, h: 20 };
+    bs = []; es = []; score = 0; alive = true;
+    sEl.innerText = score;
+}
 
 window.onkeydown = e => keys[e.code] = true;
 window.onkeyup = e => keys[e.code] = false;
-
-function spawnEnemy() {
-    if (Math.random() < 0.05) {
-        enemies.push({ x: Math.random() * 370, y: 0, w: 30, h: 30 });
-    }
-}
-
-function update() {
-    if (keys['ArrowLeft'] && player.x > 0) player.x -= 5;
-    if (keys['ArrowRight'] && player.x < 360) player.x += 5;
-    if (keys['Space']) {
-        if (bullets.length === 0 || bullets[bullets.length-1].y < 400) {
-            bullets.push({ x: player.x + 18, y: player.y, w: 4, h: 10 });
-        }
-    }
-
-    bullets.forEach((b, i) => {
-        b.y -= 7;
-        if (b.y < 0) bullets.splice(i, 1);
-    });
-
-    enemies.forEach((e, ei) => {
-        e.y += 2;
-        if (e.y > 500) { alert("GAME OVER! SCORE: " + score); location.reload(); }
-        
-        bullets.forEach((b, bi) => {
-            if (b.x < e.x + e.w && b.x + b.w > e.x && b.y < e.y + e.h && b.y + b.h > e.y) {
-                enemies.splice(ei, 1);
-                bullets.splice(bi, 1);
-                score += 100;
-                scoreEl.innerText = score;
-            }
-        });
-    });
-
-    spawnEnemy();
-}
-
-function draw() {
-    ctx.clearRect(0, 0, 400, 500);
-    ctx.fillStyle = '#0f0';
-    ctx.fillRect(player.x, player.y, player.w, player.h);
-    ctx.fillStyle = '#fff';
-    bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
-    ctx.fillStyle = '#f00';
-    enemies.forEach(e => ctx.fillRect(e.x, e.y, e.w, e.h));
-}
+cvs.onclick = () => { if(!alive) init(); };
 
 function loop() {
-    update();
-    draw();
+    if (alive) {
+        // 移動速度アップ
+        if (keys['ArrowLeft'] && p.x > 0) p.x -= 8;
+        if (keys['ArrowRight'] && p.x < 360) p.x += 8;
+        // 連射しやすく調整
+        if (keys['Space']) {
+            if (bs.length === 0 || bs[bs.length-1].y < 420) {
+                bs.push({ x: p.x + 18, y: p.y, w: 4, h: 10 });
+            }
+        }
+
+        bs.forEach((b, i) => { b.y -= 10; if (b.y < 0) bs.splice(i, 1); });
+
+        // 敵の出現率と速度をマイルドに
+        if (Math.random() < 0.03) es.push({ x: Math.random() * 370, y: -30, w: 30, h: 30 });
+        
+        es.forEach((e, i) => {
+            e.y += 1.5; // 低速化
+            if (e.y > 500) alive = false;
+            
+            bs.forEach((b, bi) => {
+                if (b.x < e.x + e.w && b.x + b.w > e.x && b.y < e.y + e.h && b.y + b.h > e.y) {
+                    es.splice(i, 1); bs.splice(bi, 1);
+                    score += 100; sEl.innerText = score;
+                }
+            });
+        });
+    }
+
+    // 描画
+    ctx.clearRect(0, 0, 400, 500);
+    ctx.fillStyle = '#0f0';
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+    ctx.fillStyle = '#fff';
+    bs.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
+    ctx.fillStyle = '#f00';
+    es.forEach(e => ctx.fillRect(e.x, e.y, e.w, e.h));
+
+    if (!alive) {
+        ctx.fillStyle = "rgba(0,0,0,0.7)";
+        ctx.fillRect(0,0,400,500);
+        ctx.fillStyle = "#fff";
+        ctx.font = "30px sans-serif";
+        ctx.fillText("GAME OVER", 110, 220);
+        ctx.font = "20px sans-serif";
+        ctx.fillText("Click to Restart", 130, 260);
+    }
     requestAnimationFrame(loop);
 }
+
+init();
 loop();
 </script>
 </body>
