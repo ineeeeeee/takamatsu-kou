@@ -2,39 +2,36 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>POWER-UP SHOOTER</title>
+    <title>BOSS BATTLE SHOOTER</title>
     <style>
-        body { background: #000; color: #0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: 'Courier New', monospace; overflow: hidden; }
-        canvas { border: 4px solid #333; background: #000; box-shadow: 0 0 20px #0f0; }
-        .ui { margin-bottom: 10px; font-size: 1.5rem; text-shadow: 0 0 10px #0f0; }
+        body { background: #000; color: #0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: monospace; overflow: hidden; }
+        canvas { border: 4px solid #333; background: #000; box-shadow: 0 0 20px #f00; }
+        .ui { margin-bottom: 10px; font-size: 1.2rem; }
     </style>
 </head>
-<body onclick="resetCheck()" onkeydown="resetCheck()">
-    <div class="ui">SCORE: <span id="s">0</span> <span id="pow" style="color:yellow; font-size:0.8rem; margin-left:20px;"></span></div>
+<body onclick="if(!alive)init()" onkeydown="if(!alive)init()">
+    <div class="ui">SCORE: <span id="s">0</span> | <span id="msg" style="color:yellow;">[SPACE]で攻撃！</span></div>
     <canvas id="g" width="400" height="550"></canvas>
-    <div style="margin-top:10px; color:#555;">[←][→]:移動 / [SPACE]:連射 / 赤:敵 / 黄:強化</div>
 
 <script>
 const cvs = document.getElementById('g');
 const ctx = cvs.getContext('2d');
 const sEl = document.getElementById('s');
-const pEl = document.getElementById('pow');
+const mEl = document.getElementById('msg');
 
-let p, bs, es, items, score, alive, power, tick;
+let p, bs, es, ebs, items, score, alive, power, tick, keys = {};
 
 function init() {
-    p = { x: 180, y: 480, w: 40, h: 20 };
-    bs = []; es = []; items = [];
+    // 自機の初期位置を少し上に調整 (y: 450)
+    p = { x: 180, y: 450, w: 40, h: 20 };
+    bs = []; es = []; ebs = []; items = [];
     score = 0; alive = true; power = 0; tick = 0;
     sEl.innerText = score;
-    pEl.innerText = "";
+    mEl.innerText = "GO!";
 }
 
-function resetCheck() { if(!alive) init(); }
-
-window.onkeydown = e => { if(alive) keys[e.code] = true; };
+window.onkeydown = e => { keys[e.code] = true; };
 window.onkeyup = e => { keys[e.code] = false; };
-let keys = {};
 
 function loop() {
     if (alive) {
@@ -42,8 +39,8 @@ function loop() {
         if (keys['ArrowLeft'] && p.x > 0) p.x -= 8;
         if (keys['ArrowRight'] && p.x < 360) p.x += 8;
         
-        // 攻撃処理（パワーアップで3連射）
-        if (keys['Space'] && tick % 8 === 0) {
+        // 攻撃：上方向に発射
+        if (keys['Space'] && tick % 7 === 0) {
             bs.push({ x: p.x + 18, y: p.y, w: 4, h: 10 });
             if(power > 0) {
                 bs.push({ x: p.x, y: p.y + 10, w: 4, h: 10 });
@@ -51,46 +48,49 @@ function loop() {
             }
         }
 
-        // アイテム出現
+        // 敵とアイテムの生成
         if (Math.random() < 0.005) items.push({ x: Math.random() * 370, y: -20, w: 20, h: 20 });
-
-        // 敵出現（一定スコアで中ボス）
         if (tick % 40 === 0) {
-            let isBoss = (score > 0 && score % 2000 === 0);
-            es.push({ x: Math.random() * 350, y: -50, w: isBoss ? 80 : 30, h: isBoss ? 40 : 30, hp: isBoss ? 10 : 1, boss: isBoss });
+            let isBoss = (score > 0 && score % 1500 === 0);
+            es.push({ x: Math.random() * 320, y: -50, w: isBoss ? 60 : 30, h: isBoss ? 40 : 30, hp: isBoss ? 15 : 1, boss: isBoss });
         }
 
-        // 更新処理
-        [bs, es, items].forEach(list => {
-            list.forEach((obj, i) => {
-                obj.y += (obj.hp ? 1 : 2.5); // ボスはゆっくり
-                if (obj.y > 550) { if(!obj.hp && list === es) alive = false; list.splice(i, 1); }
-            });
+        // 移動更新
+        bs.forEach((b, i) => { b.y -= 12; if(b.y < 0) bs.splice(i, 1); }); // プレイヤーの弾
+        ebs.forEach((eb, i) => { eb.y += 5; if(eb.y > 550) ebs.splice(i, 1); }); // 敵の弾
+        items.forEach((it, i) => { it.y += 2; if(it.y > 550) items.splice(i, 1); });
+        
+        es.forEach((e, i) => {
+            e.y += e.boss ? 0.5 : 2;
+            if (e.boss && tick % 60 === 0) ebs.push({ x: e.x + e.w/2, y: e.y + e.h, w: 8, h: 8 });
+            if (e.y > 550) { alive = false; }
+            
+            // 敵との接触判定
+            if (p.x < e.x + e.w && p.x + p.w > e.x && p.y < e.y + e.h && p.y + p.h > e.y) alive = false;
         });
 
-        // 当たり判定
+        // 弾の当たり判定
         es.forEach((e, ei) => {
             bs.forEach((b, bi) => {
                 if (b.x < e.x + e.w && b.x + b.w > e.x && b.y < e.y + e.h && b.y + b.h > e.y) {
                     e.hp--; bs.splice(bi, 1);
-                    if(e.hp <= 0) {
-                        es.splice(ei, 1);
-                        score += e.boss ? 1000 : 100;
-                        sEl.innerText = score;
-                    }
+                    if(e.hp <= 0) { es.splice(ei, 1); score += 100; sEl.innerText = score; }
                 }
             });
         });
 
-        items.forEach((it, i) => {
-            if (it.x < p.x + p.w && it.x + it.w > p.x && it.y < p.y + p.h && it.y + it.h > p.y) {
-                items.splice(i, 1);
-                power = 300; // 300フレーム分強化
-                pEl.innerText = "POWER UP!!";
-            }
+        // 敵の弾が自機に当たる判定
+        ebs.forEach((eb, i) => {
+            if (eb.x < p.x + p.w && eb.x + eb.w > p.x && eb.y < p.y + p.h && eb.y + eb.h > p.y) alive = false;
         });
 
-        if(power > 0) { power--; if(power <= 0) pEl.innerText = ""; }
+        // アイテム取得
+        items.forEach((it, i) => {
+            if (it.x < p.x + p.w && it.x + it.w > p.x && it.y < p.y + p.h && it.y + it.h > p.y) {
+                items.splice(i, 1); power = 300; mEl.innerText = "POWER UP!!";
+            }
+        });
+        if(power > 0) { power--; if(power <= 0) mEl.innerText = "Normal"; }
     }
 
     // 描画
@@ -99,17 +99,15 @@ function loop() {
     ctx.fillRect(p.x, p.y, p.w, p.h);
     ctx.fillStyle = '#fff'; bs.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
     ctx.fillStyle = '#f00'; es.forEach(e => ctx.fillRect(e.x, e.y, e.w, e.h));
+    ctx.fillStyle = '#f80'; ebs.forEach(eb => ctx.beginPath() || ctx.arc(eb.x, eb.y, 4, 0, 7) || ctx.fill());
     ctx.fillStyle = '#ff0'; items.forEach(it => ctx.fillRect(it.x, it.y, it.w, it.h));
 
     if (!alive) {
         ctx.fillStyle = "rgba(0,0,0,0.8)";
         ctx.fillRect(0,0,400,550);
-        ctx.fillStyle = "#fff";
-        ctx.textAlign = "center";
-        ctx.font = "30px monospace";
-        ctx.fillText("GAME OVER", 200, 250);
-        ctx.font = "15px monospace";
-        ctx.fillText("Click or Press Space to Retry", 200, 300);
+        ctx.fillStyle = "#fff"; ctx.textAlign = "center";
+        ctx.font = "30px monospace"; ctx.fillText("GAME OVER", 200, 250);
+        ctx.font = "15px monospace"; ctx.fillText("Click or Any Key to Restart", 200, 300);
     }
     requestAnimationFrame(loop);
 }
