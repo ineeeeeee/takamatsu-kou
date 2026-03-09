@@ -2,37 +2,84 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Survival Game</title>
+    <title>SIMPLE SHOOTER</title>
     <style>
-        body { background: #000; color: #0f0; font-family: monospace; padding: 20px; text-align: center; }
-        #out { height: 200px; padding: 20px; border: 1px solid #0f0; margin-bottom: 20px; white-space: pre-wrap; font-size: 1.2rem; }
-        button { background: #000; color: #0f0; border: 1px solid #0f0; padding: 10px 20px; margin: 5px; cursor: pointer; }
-        button:hover { background: #0f0; color: #000; }
+        body { background: #111; color: #0f0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; font-family: monospace; }
+        canvas { border: 2px solid #0f0; background: #000; }
+        .ui { margin-top: 10px; }
     </style>
 </head>
 <body>
-    <div id="out">【警告】巨大なクマが接近中！手元のアイテムで対抗しろ。</div>
-    <div id="btns">
-        <button onclick="p('A')">割れたスマホ</button>
-        <button onclick="p('B')">ピコハン</button>
-        <button onclick="p('C')">大量のわさび</button>
-        <button onclick="p('D')">タキシード</button>
-    </div>
-    <script>
-        function p(c) {
-            const o = document.getElementById('out');
-            o.innerHTML = "判定中...";
-            setTimeout(() => {
-                const r = {
-                    'A': "【生存】スマホの反射光で目潰し！クマは海へ転落した。",
-                    'B': "【死亡】いい音が鳴っただけだった。クマに食われた。",
-                    'C': "【勝利】鼻にわさびを直撃！クマは悶絶して逃走した。",
-                    'D': "【伝説】圧倒的な礼装にクマが跪いた。新しい王の誕生だ。"
-                };
-                o.innerHTML = r[c] + "\n\n<button onclick='location.reload()'>リトライ</button>";
-                document.getElementById('btns').style.display = 'none';
-            }, 800);
+    <div class="ui">SCORE: <span id="score">0</span> | [←][→]:移動 [SPACE]:攻撃</div>
+    <canvas id="g" width="400" height="500"></canvas>
+
+<script>
+const cvs = document.getElementById('g');
+const ctx = cvs.getContext('2d');
+const scoreEl = document.getElementById('score');
+
+let player = { x: 180, y: 450, w: 40, h: 20 };
+let bullets = [];
+let enemies = [];
+let score = 0;
+let keys = {};
+
+window.onkeydown = e => keys[e.code] = true;
+window.onkeyup = e => keys[e.code] = false;
+
+function spawnEnemy() {
+    if (Math.random() < 0.05) {
+        enemies.push({ x: Math.random() * 370, y: 0, w: 30, h: 30 });
+    }
+}
+
+function update() {
+    if (keys['ArrowLeft'] && player.x > 0) player.x -= 5;
+    if (keys['ArrowRight'] && player.x < 360) player.x += 5;
+    if (keys['Space']) {
+        if (bullets.length === 0 || bullets[bullets.length-1].y < 400) {
+            bullets.push({ x: player.x + 18, y: player.y, w: 4, h: 10 });
         }
-    </script>
+    }
+
+    bullets.forEach((b, i) => {
+        b.y -= 7;
+        if (b.y < 0) bullets.splice(i, 1);
+    });
+
+    enemies.forEach((e, ei) => {
+        e.y += 2;
+        if (e.y > 500) { alert("GAME OVER! SCORE: " + score); location.reload(); }
+        
+        bullets.forEach((b, bi) => {
+            if (b.x < e.x + e.w && b.x + b.w > e.x && b.y < e.y + e.h && b.y + b.h > e.y) {
+                enemies.splice(ei, 1);
+                bullets.splice(bi, 1);
+                score += 100;
+                scoreEl.innerText = score;
+            }
+        });
+    });
+
+    spawnEnemy();
+}
+
+function draw() {
+    ctx.clearRect(0, 0, 400, 500);
+    ctx.fillStyle = '#0f0';
+    ctx.fillRect(player.x, player.y, player.w, player.h);
+    ctx.fillStyle = '#fff';
+    bullets.forEach(b => ctx.fillRect(b.x, b.y, b.w, b.h));
+    ctx.fillStyle = '#f00';
+    enemies.forEach(e => ctx.fillRect(e.x, e.y, e.w, e.h));
+}
+
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+loop();
+</script>
 </body>
 </html>
